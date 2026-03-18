@@ -11,12 +11,15 @@ cmd/
 internal/
 ├── domain/                                 # Core business logic (entities, interfaces)
 │   ├── flag.go                             # FeatureFlag entity with evaluation logic
+│   ├── target_rule.go                      # Target rule entity
 │   └── flag_repository_interface.go        # Repository interface
 ├── application/                            # Application services and handlers
 │   ├── flag_service.go                     # Business logic orchestration
 │   └── flag_handler.go                     # HTTP request/response handling
-└── infrastructure/                         # Infrastructure implementations
-    └── flag_repository.go                  # In-memory repository implementation
+├── infrastructure/                         # Infrastructure implementations
+│   ├── flag_repository.go                  # In-memory repository implementation
+└──tests/                                   # Unit and integration tests
+    └── flag_handler_tests.go               # Business logic orchestration
 ```
 
 ### Design Decisions
