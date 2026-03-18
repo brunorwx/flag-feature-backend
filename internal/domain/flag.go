@@ -2,6 +2,7 @@ package domain
 
 import (
 	"hash/fnv"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,35 @@ func NewFeatureFlag(key, name string, globalEnabled bool, rolloutPercentage int,
 		UserOverrides:     make(map[string]bool),
 		RolloutPercentage: rolloutPercentage,
 		Timestamp:         time.Now(),
+		TargetRules:       trimTargetRule(targetRules),
+	}
+}
+
+func trimTargetRule(rules [][]string) TargetRule {
+	country := []string{}
+	plan := []string{}
+
+	for _, rule := range rules {
+		for _, condition := range rule {
+			parts := strings.Split(condition, ":")
+			if len(parts) != 2 {
+				continue
+			}
+
+			key, value := parts[0], parts[1]
+
+			switch key {
+			case "country":
+				country = append(country, value)
+			case "plan":
+				plan = append(plan, value)
+			}
+		}
+	}
+
+	return TargetRule{
+		Country: country,
+		Plan:    plan,
 	}
 }
 
