@@ -16,9 +16,11 @@ func NewHandler(service *FeatureFlagService) *Handler {
 }
 
 type CreateFlagRequest struct {
-	Key           string `json:"key"`
-	Name          string `json:"name"`
-	GlobalEnabled bool   `json:"globalEnabled"`
+	Key               string     `json:"key"`
+	Name              string     `json:"name"`
+	GlobalEnabled     bool       `json:"globalEnabled"`
+	RolloutPercentage int        `json:"rolloutPercentage"`
+	TargetRules       [][]string `json:"targetRules"`
 }
 
 type SetOverrideRequest struct {
@@ -39,6 +41,10 @@ type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
+type EvaluationRequest struct {
+	Keys []string `json:"keys"`
+}
+
 func (h *Handler) CreateFlag(w http.ResponseWriter, r *http.Request) {
 	var req CreateFlagRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -55,7 +61,7 @@ func (h *Handler) CreateFlag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	flag, err := h.service.CreateFlag(req.Key, req.Name, req.GlobalEnabled)
+	flag, err := h.service.CreateFlag(req.Key, req.Name, req.GlobalEnabled, req.RolloutPercentage, req.TargetRules)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
@@ -82,6 +88,20 @@ func (h *Handler) GetFlag(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(flag)
+}
+
+func (h *Handler) DeleteFlag(w http.ResponseWriter, r *http.Request) {
+	key := chi.URLParam(r, "key")
+	err := h.service.DeleteFlag(key)
+
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) SetUserOverride(w http.ResponseWriter, r *http.Request) {
@@ -134,9 +154,15 @@ func (h *Handler) SetGlobalState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) EvaluateFlag(w http.ResponseWriter, r *http.Request) {
-	key := chi.URLParam(r, "key")
 	userID := r.URL.Query().Get("userId")
+	var req EvaluationRequest
 
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{Error: "invalid request body"})
+		return
+	}
 	if userID == "" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -144,7 +170,7 @@ func (h *Handler) EvaluateFlag(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enabled, err := h.service.Evaluate(key, userID)
+	enabled, err := h.service.Evaluate(req.Keys, userID)
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
@@ -154,11 +180,7 @@ func (h *Handler) EvaluateFlag(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(EvaluateResponse{
-		Key:     key,
-		UserID:  userID,
-		Enabled: enabled,
-	})
+	json.NewEncoder(w).Encode(enabled)
 }
 
 func (h *Handler) ListFlags(w http.ResponseWriter, r *http.Request) {

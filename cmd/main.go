@@ -33,6 +33,7 @@ func main() {
 	r.Put("/flags/{key}/global", handler.SetGlobalState)
 	r.Put("/flags/{key}/users/{userId}", handler.SetUserOverride)
 	r.Get("/evaluate/{key}", handler.EvaluateFlag)
+	r.Delete("/flags/{key}", handler.DeleteFlag)
 
 	port := ":8080"
 	log.Printf("Starting Feature Flag API on %s\n", port)

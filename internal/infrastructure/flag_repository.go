@@ -38,6 +38,25 @@ func (r *InMemoryFeatureFlagRepository) GetByKey(key string) (*domain.FeatureFla
 	return flag, nil
 }
 
+func (r *InMemoryFeatureFlagRepository) GetByKeys(keys []string) ([]*domain.FeatureFlag, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	result := make([]*domain.FeatureFlag, 0)
+
+	for _, key := range keys {
+		if flag, ok := r.flags[key]; ok {
+			result = append(result, flag)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil, errors.New("no feature flags found")
+	}
+
+	return result, nil
+}
+
 func (r *InMemoryFeatureFlagRepository) GetAll() ([]*domain.FeatureFlag, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -46,4 +65,14 @@ func (r *InMemoryFeatureFlagRepository) GetAll() ([]*domain.FeatureFlag, error) 
 		flags = append(flags, flag)
 	}
 	return flags, nil
+}
+
+func (r *InMemoryFeatureFlagRepository) DeleteByKey(key string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.flags[key]; !ok {
+		return errors.New("feature flag not found")
+	}
+	delete(r.flags, key)
+	return nil
 }

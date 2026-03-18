@@ -5,5 +5,9 @@ type FeatureFlagRepository interface {
 
 	GetByKey(key string) (*FeatureFlag, error)
 
+	GetByKeys(keys []string) ([]*FeatureFlag, error)
+
 	GetAll() ([]*FeatureFlag, error)
+
+	DeleteByKey(key string) error
 }
